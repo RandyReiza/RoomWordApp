@@ -14,6 +14,29 @@ abstract class WordRoomDatabase : RoomDatabase() {
 
     abstract fun wordDao(): WordDao
 
+    private class WordDatabaseCallback(private val scope: CoroutineScope) : RoomDatabase.Callback() {
+
+        override fun onCreate(db: SupportSQLiteDatabase) {
+            super.onCreate(db)
+            INSTANCE?.let { database ->
+                scope.launch {
+                    populateDatabase(database.wordDao())
+                }
+            }
+        }
+
+        suspend fun populateDatabase(wordDao: WordDao) {
+            // Delete all content here
+            wordDao.deleteAll()
+
+            // Add sample words
+            var word = Word("Hello")
+            wordDao.insert(word)
+            word = Word("World!")
+            wordDao.insert(word)
+        }
+    }
+
     companion object {
         // Singleton prevents multiple instances of database opening at the
         // same time.
@@ -29,6 +52,7 @@ abstract class WordRoomDatabase : RoomDatabase() {
                     WordRoomDatabase::class.java,
                     "word_database"
                 )
+                    .addCallback(WordDatabaseCallback(scope))
                     .build()
                 INSTANCE = instance
                 // return instance
